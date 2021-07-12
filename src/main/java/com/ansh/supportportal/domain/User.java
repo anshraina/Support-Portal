@@ -22,7 +22,7 @@ public class User implements Serializable{
     private String username;
     private String password;
     private String profileImageUrl;
-    private String emailId;
+    private String email;
     private Date lastLoginDate;
     private Date lastLoginDateDisplay;
     private Date joinDate;
@@ -76,11 +76,11 @@ public class User implements Serializable{
     public void setProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
     }
-    public String getEmailId() {
-        return emailId;
+    public String getemail() {
+        return email;
     }
-    public void setEmailId(String emailId) {
-        this.emailId = emailId;
+    public void setemail(String email) {
+        this.email = email;
     }
     public Date getLastLoginDate() {
         return lastLoginDate;
@@ -126,7 +126,7 @@ public class User implements Serializable{
     }
     
     public User(Long id, String userId, String firstName, String lastName, String username, String password,
-            String profileImageUrl, String emailId, Date lastLoginDate, Date lastLoginDateDisplay, Date joinDate,
+            String profileImageUrl, String email, Date lastLoginDate, Date lastLoginDateDisplay, Date joinDate,
             String[] roles, String[] authorities, boolean isActive, boolean isNotLocked) {
         this.id = id;
         this.userId = userId;
@@ -135,7 +135,7 @@ public class User implements Serializable{
         this.username = username;
         this.password = password;
         this.profileImageUrl = profileImageUrl;
-        this.emailId = emailId;
+        this.email = email;
         this.lastLoginDate = lastLoginDate;
         this.lastLoginDateDisplay = lastLoginDateDisplay;
         this.joinDate = joinDate;
