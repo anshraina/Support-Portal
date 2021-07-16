@@ -5,6 +5,7 @@ import static com.ansh.supportportal.enumeration.Role.ROLE_USER;
 import java.util.Date;
 import java.util.List;
 
+import javax.mail.MessagingException;
 import javax.transaction.Transactional;
 
 import com.ansh.supportportal.domain.User;
@@ -13,6 +14,8 @@ import com.ansh.supportportal.exception.EmailExistsException;
 import com.ansh.supportportal.exception.UserNotFoundException;
 import com.ansh.supportportal.exception.UsernameExistsException;
 import com.ansh.supportportal.repositories.UserRepository;
+import com.ansh.supportportal.service.EmailService;
+import com.ansh.supportportal.service.LoginAttemptService;
 import com.ansh.supportportal.service.UserService;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -36,10 +39,17 @@ public class UserServiceImpl implements UserService, UserDetailsService{
     private BCryptPasswordEncoder passwordEncoder;
     private Logger LOGGER = LoggerFactory.getLogger(getClass());
     private UserRepository userRepository;
+    private LoginAttemptService loginAttemptService;
+    private EmailService emailService;
+
+
     @Autowired
-    public UserServiceImpl(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, LoginAttemptService loginAttemptService,
+        EmailService emailService) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
+        this.loginAttemptService = loginAttemptService;
+        this.emailService = emailService;
     }
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -48,6 +58,7 @@ public class UserServiceImpl implements UserService, UserDetailsService{
             LOGGER.error("User not found by username " + username);
             throw new UsernameNotFoundException("User not found by username " + username);
         } else {
+            validateLoginAttempt(user);
             user.setLastLoginDateDisplay(user.getLastLoginDate());
             user.setLastLoginDate(new Date());
             userRepository.save(user);
@@ -57,8 +68,20 @@ public class UserServiceImpl implements UserService, UserDetailsService{
         }
         
     }
+    private void validateLoginAttempt(User user)  {
+        if(user.isNotLocked()) {
+            if(loginAttemptService.exceededMaxAttempt(user.getUsername())) {
+                user.setNotLocked(false);
+            } else {
+                user.setNotLocked(true);
+            }
+        } else {
+            loginAttemptService.evictUserFromLoginAttempt(user.getUsername());
+        }
+    }
     @Override
-    public User register(String firstName, String lastName, String username, String email) throws UsernameExistsException, EmailExistsException, UserNotFoundException {
+    public User register(String firstName, String lastName, String username, String email) throws 
+        UsernameExistsException, EmailExistsException, UserNotFoundException {
         validateNewUserAndEmail(StringUtils.EMPTY, username, email);
         User user = new User();
         user.setUserId(generatedUserId());
@@ -77,7 +100,12 @@ public class UserServiceImpl implements UserService, UserDetailsService{
         user.setAuthorities(ROLE_USER.getAuthorities());
         user.setProfileImageUrl(getTemporaryProfileImageUrl());
         userRepository.save(user);
-
+        try {
+            emailService.sendNewPasswordEmail(firstName, password, email);
+        } catch (MessagingException e) {
+            
+            e.printStackTrace();
+        }
         LOGGER.info("New user password");
         return user;
     }
